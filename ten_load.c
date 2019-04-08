@@ -152,8 +152,10 @@ fillVer( ten_State* ten, Loader* ld, char const* dir, Version* ver ) {
         char* end  = NULL;
         
         long major = strtol( next, &end, 10 );
-        if( end == next || *end != '-' )
+        if( end == next || *end != '-' ) {
+            e = readdir( d );
             continue;
+        }
         
         if( major >= ver->major ) {
             next = end + 1;
@@ -351,7 +353,7 @@ tenLoad( ten_State* ten, Loader* ld, char const* path, ten_Var* dst ) {
     
     char const* upvals[] = { "export", NULL };
     ten_Source* src = ten_pathSource( ten, path );
-    ten_compileExpr( ten, upvals, src, ten_SCOPE_LOCAL, ten_COM_CLS, &clsVar );
+    ten_compileScript( ten, upvals, src, ten_SCOPE_LOCAL, ten_COM_CLS, &clsVar );
     
     
     ten_setUpvalue( ten, &clsVar, 0, dst );
