@@ -3,7 +3,7 @@
 
 #include <ten.h>
 
-void
-ten_load( ten_State* state, char const* ppro, char const** plib, char const* lang );
+int
+ten_load( ten_State* state, char const* ppro, char const* plib, char const* lang );
 
 #endif

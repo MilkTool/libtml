@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <limits.h>
 #include <dlfcn.h>
 #include <stdlib.h>
 #include <dirent.h>
@@ -37,9 +38,11 @@ struct SetN {
 };
 
 struct Loader {
-    unsigned nlib;
-    Slice*   plib;
-    char*    lang;
+    char* lang;
+    
+    #define LIBDIRS_CAP (64)
+    Slice    libdirs[LIBDIRS_CAP];
+    unsigned numdirs;
     
     StackN* stack;
     
@@ -52,13 +55,6 @@ struct Version {
     long minor;
     long patch;
 };
-
-static StackN*
-pswap( Loader* ld, StackN* stack ) {
-    StackN* oStack = ld->stack;
-    ld->stack = stack;
-    return oStack;
-}
 
 static void
 pclear( Loader* ld, StackN* top ) {
@@ -84,15 +80,6 @@ ppush( Loader* ld, char const* path, size_t len ) {
     ld->stack = node;
     
     return node->prev;
-}
-
-static void
-ppop( Loader* ld ) {
-    assert( ld->stack );
-    
-    StackN* oStack = ld->stack;
-    ld->stack = oStack->prev;
-    free( oStack );
 }
 
 static unsigned
@@ -225,7 +212,7 @@ fillExt( ten_State* ten, Loader* ld, char const* file, char const** ext ) {
     }
     
     strcpy( pext, ".dat" );
-    if( access( pstr, F_OK ) ) {
+    if( access( pstr, F_OK ) != -1 ) {
         *ext = ".dat";
         return true;
     }
@@ -497,8 +484,8 @@ libTrans( ten_PARAMS ) {
     };
     
     Slice* fpath = NULL;
-    for( unsigned i = 0 ; i < ld->nlib ; i++ ) {
-        fpath = libFind( ten, ld, &ld->plib[i], &lib, &ver, &path );
+    for( unsigned i = 0 ; i < ld->numdirs ; i++ ) {
+        fpath = libFind( ten, ld, &ld->libdirs[i], &lib, &ver, &path );
         if( fpath )
             break;
     }
@@ -518,15 +505,14 @@ proTrans( ten_PARAMS ) {
     ten_Var modArg = { .tup = args, .loc = 0 };
     ten_expect( ten, "mod", ten_sym( ten, "Str" ), &modArg );
     
-    size_t      len      = ten_getStrLen( ten, &modArg );
-    char const* modStart = ten_getStrBuf( ten, &modArg );
-    char const* modEnd   = modStart + len;
+    size_t      len = ten_getStrLen( ten, &modArg );
+    char const* mod = ten_getStrBuf( ten, &modArg );
     
-    if( !checkPath( modStart, len ) )
+    if( !checkPath( mod, len ) )
         ten_panic( ten, ten_str( ten, "Invalid module path" ) );
     
     assert( ld->stack );
-    Slice  spath = { .str = (char*)modStart, .len = len };
+    Slice  spath = { .str = (char*)mod, .len = len };
     Slice  sdir  = { .str = ld->stack->pstr, .len = ld->stack->plen };
     Slice* fpath = proFind( ten, ld, &sdir, &spath );
     
@@ -618,30 +604,50 @@ finl( ten_State* ten, void* dat ) {
             free( n );
         }
     }
-    free( ld->plib );
     free( ld->lang );
 }
 
-void
-ten_load( ten_State* ten, char const* ppro, char const** plib, char const* lang ) {
-    if( strlen( lang ) > 3 ) {
-        fprintf( stderr, "ten_load: Language tag 'lang' is too long, must be 3 chars" );
-        exit( 1 );  
-    }
-    if( ppro[0] != '/' ) {
-        fprintf( stderr, "ten_load: Project path 'ppro' must be absolute path" );
-        exit( 1 );  
-    }
+char*
+abspath( char const* path ) {
+    static char buf[PATH_MAX];
+    char* p = realpath( path, buf );
+    return p;
+}
+
+bool
+nextlib( char const** plib, Slice** dsts ) {
+    char const* s = *plib;
     
-    unsigned nlib = 0;
-    for( unsigned i = 0 ; plib[i] != NULL ; i++ ) {
-        nlib++;
-        if( plib[i][0] != '/' ) {
-            fprintf( stderr, "ten_load: Library path 'plib[%u]' must be absolute path", i );
-            exit( 1 );  
-        }
-    }
+    while( *s == ':' )
+        s++;
     
+    if( *s == '\0' )
+        return false;
+    
+    char const* e = s;
+    while( *e != ':' && *e != '\0' )
+        e++;
+    
+    *plib = e;
+    
+    size_t len = e - s;
+    char   rel[len + 1];
+    strncpy( rel, s, len );
+    rel[len] = '\0';
+    
+    char* abs = abspath( rel );
+    if( !abs )
+        return true;
+    
+    Slice* dst = (*dsts)++;
+    dst->len = strlen( abs );
+    dst->str = strdup( abs );
+    
+    return true;
+}
+
+int
+ten_load( ten_State* ten, char const* ppro, char const* plib, char const* lang ) {
     
     ten_Tup varTup    = ten_pushA( ten, "UUUUUSS", "pro", "lib" );
     ten_Var datVar    = { .tup = &varTup, .loc = 0 };
@@ -664,24 +670,29 @@ ten_load( ten_State* ten, char const* ppro, char const** plib, char const* lang 
         );
     Loader* ld = ten_newDat( ten, ldInfo, &datVar );
     
-    ld->lang = malloc( 4 );
-    strcpy( ld->lang, lang );
     
-    ld->nlib = nlib;
-    ld->plib = malloc( sizeof(Slice)*nlib );
-    for( unsigned i = 0 ; plib[i] != NULL ; i++ ) {
-        size_t len = strlen( plib[i] );
-        char*  str = malloc( len + 1 );
-        strcpy( str, plib[i] );
-        
-        ld->plib[i].len = len;
-        ld->plib[i].str = str;
-    }
-    
+    ld->lang  = strdup( lang );
     ld->stack = NULL;
     
     for( unsigned i = 0 ; i < SET_CAP ; i++ )
         ld->set[i] = NULL;
+    
+    Slice* next = ld->libdirs;
+    ld->numdirs = 0;
+    while( nextlib( &plib, &next ) ) {
+        ld->numdirs++;
+        if( ld->numdirs == LIBDIRS_CAP )
+            return -1;
+    }
+    if( ld->numdirs == 0 )
+        return -2;
+    
+    char* abspro = abspath( ppro );
+    if( !abspro )
+        return -3;
+    
+    ppush( ld, abspro, strlen( abspro ) );
+    
     
     ten_FunParams pTransParams = {
         .name   = "proTrans",
@@ -711,4 +722,6 @@ ten_load( ten_State* ten, char const* ppro, char const** plib, char const* lang 
     ten_loader( ten, &ltypeVar, &loadVar, &ltransVar );
     
     ten_pop( ten );
+    
+    return 0;
 }
