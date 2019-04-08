@@ -371,7 +371,7 @@ rawLoad( ten_State* ten, Loader* ld, char const* path, ten_Var* dst ) {
     
     
     char*  raw = malloc( buf.st_size );
-    size_t len = fread( raw, 0, buf.st_size, file );
+    size_t len = fread( raw, 1, buf.st_size, file );
     fclose( file );
     
     ten_newStr( ten, raw, len, dst );
