@@ -472,6 +472,10 @@ libTrans( ten_PARAMS ) {
     
     char const* pathStart = verEnd + 1;
     char const* pathEnd   = modEnd;
+    if( pathStart == modEnd ) {
+        pathStart = libStart;
+        pathEnd   = libEnd;    
+    }
     
     if( !checkPath( pathStart, pathEnd - pathStart ) )
         ten_panic( ten, ten_str( ten, "Invalid module path" ) );
