@@ -146,6 +146,8 @@ fillVer( ten_State* ten, Loader* ld, char const* dir, Version* ver ) {
     if( d == NULL )
         return false;
     
+    Version max = { -1, -1, -1 };
+    
     struct dirent* e = readdir( d );
     while( e ) {
         char* next = e->d_name;
@@ -157,22 +159,22 @@ fillVer( ten_State* ten, Loader* ld, char const* dir, Version* ver ) {
             continue;
         }
         
-        if( major >= ver->major ) {
+        if( (ver->major < 0 || major == ver->major) && major >= max.major ) {
             next = end + 1;
             long minor = strtol( next, &end, 10 );
             if( end == next || *end != '-' )
                 continue;
             
-            if( minor >= ver->minor ) {
+            if( (ver->minor < 0 || minor == ver->minor) && minor >= max.minor ) {
                 next = end + 1;
                 long patch = strtol( next, &end, 10 );
                 if( end == next || *end != '\0' )
                     continue;
                 
-                if( patch > ver->patch ) {
-                    ver->major = major;
-                    ver->minor = minor;
-                    ver->patch = patch;
+                if( (ver->patch < 0 || patch == ver->patch) && patch > max.patch ) {
+                    max.major = major;
+                    max.minor = minor;
+                    max.patch = patch;
                 }
             }
         }
@@ -181,6 +183,7 @@ fillVer( ten_State* ten, Loader* ld, char const* dir, Version* ver ) {
     
     closedir( d );
     
+    *ver = max;
     if( ver->minor < 0 || ver->major < 0 || ver->patch < 0 )
         return false;
     else
