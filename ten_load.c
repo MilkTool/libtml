@@ -235,6 +235,14 @@ fillExt( ten_State* ten, Loader* ld, char const* file, char const** ext ) {
 
 static Slice*
 libFind( ten_State* ten, Loader* ld, Slice* dir, Slice* lib, Version* ver, Slice* path ) {
+    
+    // Files begining in '_' are private and must be loaded as 'pro:'
+    char* fname = path->str + path->len;
+    while( fname != path->str && fname[-1] != '/' )
+        fname--;
+    if( fname[0] == '_' )
+        return NULL;
+    
     size_t plen = dir->len + lib->len + MAX_VER_LEN + path->len + 16;
     char   pstr[plen];
     
