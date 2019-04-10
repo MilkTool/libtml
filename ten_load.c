@@ -656,7 +656,7 @@ nextlib( char const** plib, Slice** dsts ) {
     
     char* abs = abspath( rel );
     if( !abs )
-        return true;
+        return nextlib( plib, dsts );
     
     Slice* dst = (*dsts)++;
     dst->len = strlen( abs );
