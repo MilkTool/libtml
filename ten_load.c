@@ -483,7 +483,7 @@ libTrans( ten_PARAMS ) {
     
     char const* pathStart = verEnd + 1;
     char const* pathEnd   = modEnd;
-    if( pathStart == modEnd ) {
+    if( verEnd == modEnd ) {
         pathStart = libStart;
         pathEnd   = libEnd;    
     }
@@ -621,6 +621,8 @@ finl( ten_State* ten, void* dat ) {
             free( n );
         }
     }
+    for( uint i = 0 ; i < ld->numdirs ; i++ )
+        free( ld->libdirs[i].str );
     free( ld->lang );
 }
 
