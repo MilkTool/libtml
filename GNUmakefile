@@ -10,6 +10,7 @@ libtml.a: tml.h tml.c
 .PHONY: install
 install:
 	mkdir -p $(LIBDIR)
+	mkdir -p $(INCDIR)
 	cp libtml.a $(LIBDIR)
 	cp tml.h $(INCDIR)
 
