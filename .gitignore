@@ -1,6 +1,3 @@
 **/*.o
-**/*.out
-**/*.so
-**/build/
+**/*.a
 **/vgcore.*
-**/test/test

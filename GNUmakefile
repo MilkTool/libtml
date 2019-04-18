@@ -1,5 +1,3 @@
-IDIRS   := -I ten-lang/src/
-LDIRS   := -L ten-lang/
 CCFLAGS := -Wall
 PROFILE ?= release
 
@@ -20,7 +18,7 @@ else
 endif
 
 libtml$(POSTFIX).a: tml.h tml.c
-	$(CC) $(CCFLAGS) $(IDIRS) $(LDIRS) -c tml.c -o tml.o
+	$(CC) $(CCFLAGS) -c tml.c -o tml.o
 	ar rcs libtml$(POSTFIX).a tml.o
 
 .PHONY: install
