@@ -1,4 +1,4 @@
-#include "ten_load.h"
+#include "tml.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -335,9 +335,9 @@ soLoad( ten_State* ten, Loader* ld, char const* path, ten_Var* dst ) {
     if( !dll )
         ten_panic( ten, ten_str( ten, dlerror() ) );
     
-    ExportFun ten_export = dlsym( dll, "ten_export" );
-    if( !ten_export )
-        ten_panic( ten, ten_str( ten, "No 'ten_export' function in DLL" ) );
+    ExportFun tml_export = dlsym( dll, "tml_export" );
+    if( !tml_export )
+        ten_panic( ten, ten_str( ten, "No 'tml_export' function in DLL" ) );
     
     
     ten_Tup varTup = ten_pushA( ten, "U" );
@@ -346,7 +346,7 @@ soLoad( ten_State* ten, Loader* ld, char const* path, ten_Var* dst ) {
     ten_newIdx( ten, &idxVar );
     ten_newRec( ten, &idxVar, dst );
     
-    ten_export( ten, dst );
+    tml_export( ten, dst );
     
     ten_pop( ten );
 }
@@ -666,7 +666,7 @@ nextlib( char const** plib, Slice** dsts ) {
 }
 
 int
-ten_load( ten_State* ten, char const* ppro, char const* plib, char const* lang ) {
+tml_install( ten_State* ten, char const* ppro, char const* plib, char const* lang ) {
     
     ten_Tup varTup    = ten_pushA( ten, "UUUUUSS", "pro", "lib" );
     ten_Var datVar    = { .tup = &varTup, .loc = 0 };
