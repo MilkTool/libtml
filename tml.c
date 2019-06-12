@@ -609,7 +609,7 @@ load( ten_PARAMS ) {
 }
 
 void
-finl( ten_State* ten, void* dat ) {
+finl( void* dat ) {
     Loader* ld = dat;
     pclear( ld, NULL );
     for( unsigned i = 0 ; i < SET_CAP ; i++ ) {
