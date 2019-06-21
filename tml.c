@@ -341,7 +341,7 @@ soLoad( ten_State* ten, Loader* ld, char const* path, ten_Var* dst ) {
     
     
     ten_Tup varTup = ten_pushA( ten, "U" );
-    ten_Var idxVar = { .tup = &varTup, .loc = 0 };
+    ten_Var idxVar = ten_var( varTup, 0 );
     
     ten_newIdx( ten, &idxVar );
     ten_newRec( ten, &idxVar, dst );
@@ -356,8 +356,8 @@ tenLoad( ten_State* ten, Loader* ld, char const* path, ten_Var* dst ) {
     ten_Tup argTup = ten_pushA( ten, "" );
     
     ten_Tup varTup = ten_pushA( ten, "UU" );
-    ten_Var idxVar = { .tup = &varTup, .loc = 0 };
-    ten_Var clsVar = { .tup = &varTup, .loc = 1 };
+    ten_Var idxVar = ten_var( varTup, 0 );
+    ten_Var clsVar = ten_var( varTup, 1 );
     
     ten_newIdx( ten, &idxVar );
     ten_newRec( ten, &idxVar, dst );
@@ -417,11 +417,11 @@ checkPath( char const* path, size_t len ) {
     return true;
 }
 
-static ten_Tup
-libTrans( ten_PARAMS ) {
-    Loader* ld = (Loader*)dat;
+ten_define(libTrans) {
+    ten_State* ten = call->ten;
+    Loader*    ld  = call->data;
     
-    ten_Var modArg = { .tup = args, .loc = 0 };
+    ten_Var modArg = ten_arg( 0 );
     ten_expect( ten, "mod", ten_sym( ten, "Str" ), &modArg );
     
     size_t      len      = ten_getStrLen( ten, &modArg );
@@ -508,18 +508,18 @@ libTrans( ten_PARAMS ) {
     }
     
     ten_Tup retTup = ten_pushA( ten, "U" );
-    ten_Var retVar = { .tup = &retTup, .loc = 0 };
+    ten_Var retVar = ten_var( retTup, 0 );
     if( fpath )
         ten_newStr( ten, fpath->str, fpath->len, &retVar );
     
     return retTup;
 }
 
-static ten_Tup
-proTrans( ten_PARAMS ) {
-    Loader* ld = (Loader*)dat;
+ten_define(proTrans) {
+    ten_State* ten = call->ten;
+    Loader*    ld  = call->data;
     
-    ten_Var modArg = { .tup = args, .loc = 0 };
+    ten_Var modArg = ten_arg( 0 );
     ten_expect( ten, "mod", ten_sym( ten, "Str" ), &modArg );
     
     size_t      len = ten_getStrLen( ten, &modArg );
@@ -534,18 +534,18 @@ proTrans( ten_PARAMS ) {
     Slice* fpath = proFind( ten, ld, &sdir, &spath );
     
     ten_Tup retTup = ten_pushA( ten, "U" );
-    ten_Var retVar = { .tup = &retTup, .loc = 0 };
+    ten_Var retVar = ten_var( retTup, 0 );
     if( fpath )
         ten_newStr( ten, fpath->str, fpath->len, &retVar );
     
     return retTup;
 }
 
-static ten_Tup
-load( ten_PARAMS ) {
-    Loader* ld = (Loader*)dat;
+ten_define(load) {
+    ten_State* ten = call->ten;
+    Loader*    ld  = call->data;
     
-    ten_Var pathArg = { .tup = args, .loc = 0 };
+    ten_Var pathArg = ten_arg( 0 );
     ten_expect( ten, "path", ten_sym( ten, "Str" ), &pathArg );
     
     size_t      plen = ten_getStrLen( ten, &pathArg );
@@ -582,7 +582,7 @@ load( ten_PARAMS ) {
     }
     
     ten_Tup retTup = ten_pushA( ten, "U" );
-    ten_Var retVar = { .tup = &retTup, .loc = 0 };
+    ten_Var retVar = ten_var( retTup, 0 );
     
     if( plen > 3 && !strcmp( pend - 3, ".so" ) )
         soLoad( ten, ld, pstr, &retVar );
@@ -669,13 +669,13 @@ int
 tml_install( ten_State* ten, char const* ppro, char const* plib, char const* lang ) {
     
     ten_Tup varTup    = ten_pushA( ten, "UUUUUSS", "pro", "lib" );
-    ten_Var datVar    = { .tup = &varTup, .loc = 0 };
-    ten_Var funVar    = { .tup = &varTup, .loc = 1 };
-    ten_Var loadVar   = { .tup = &varTup, .loc = 2 };
-    ten_Var ptransVar = { .tup = &varTup, .loc = 3 };
-    ten_Var ltransVar = { .tup = &varTup, .loc = 4 };
-    ten_Var ptypeVar  = { .tup = &varTup, .loc = 5 };
-    ten_Var ltypeVar  = { .tup = &varTup, .loc = 6 };
+    ten_Var datVar    = ten_var( varTup, 0 );
+    ten_Var funVar    = ten_var( varTup, 1 );
+    ten_Var loadVar   = ten_var( varTup, 2 );
+    ten_Var ptransVar = ten_var( varTup, 3 );
+    ten_Var ltransVar = ten_var( varTup, 4 );
+    ten_Var ptypeVar  = ten_var( varTup, 5 );
+    ten_Var ltypeVar  = ten_var( varTup, 6 );
     
     ten_DatInfo* ldInfo =
         ten_addDatInfo(
@@ -716,7 +716,7 @@ tml_install( ten_State* ten, char const* ppro, char const* plib, char const* lan
     ten_FunParams pTransParams = {
         .name   = "proTrans",
         .params = (char const*[]){ "mod", NULL },
-        .cb     = proTrans
+        .cb     = ten_fun(proTrans)
     };
     ten_newFun( ten, &pTransParams, &funVar );
     ten_newCls( ten, &funVar, &datVar, &ptransVar );
@@ -724,7 +724,7 @@ tml_install( ten_State* ten, char const* ppro, char const* plib, char const* lan
     ten_FunParams lTransParams = {
         .name   = "libTrans",
         .params = (char const*[]){ "mod", NULL },
-        .cb     = libTrans
+        .cb     = ten_fun(libTrans)
     };
     ten_newFun( ten, &lTransParams, &funVar );
     ten_newCls( ten, &funVar, &datVar, &ltransVar );
@@ -732,7 +732,7 @@ tml_install( ten_State* ten, char const* ppro, char const* plib, char const* lan
     ten_FunParams loadParams = {
         .name   = "load",
         .params = (char const*[]){ "path", NULL },
-        .cb     = load
+        .cb     = ten_fun(load)
     };
     ten_newFun( ten, &loadParams, &funVar );
     ten_newCls( ten, &funVar, &datVar, &loadVar );
