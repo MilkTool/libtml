@@ -210,6 +210,12 @@ fillExt( ten_State* ten, Loader* ld, char const* file, char const** ext ) {
         return true;
     }
     
+    strcpy( pext, ".dll" );
+    if( access( pstr, F_OK ) != -1 ) {
+        *ext = ".dll";
+        return true;
+    }
+    
     strcpy( pext, ".txt" );
     if( access( pstr, F_OK ) != -1 ) {
         *ext = ".txt";
@@ -585,6 +591,9 @@ ten_define(load) {
     ten_Var retVar = ten_var( retTup, 0 );
     
     if( plen > 3 && !strcmp( pend - 3, ".so" ) )
+        soLoad( ten, ld, pstr, &retVar );
+    else
+    if( plen > 4 && !strcmp( pend - 4, ".dll" ) )
         soLoad( ten, ld, pstr, &retVar );
     else
     if( plen > 4 && !strcmp( pend - 4, ".ten" ) )
