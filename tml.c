@@ -712,12 +712,10 @@ tml_install( ten_State* ten, char const* ppro, char const* plib, char const* lan
         if( ld->numdirs == LIBDIRS_CAP )
             return -1;
     }
-    if( ld->numdirs == 0 )
-        return -2;
     
     char* abspro = abspath( ppro );
     if( !abspro )
-        return -3;
+        return -2;
     
     ppush( ld, abspro, strlen( abspro ) );
     
